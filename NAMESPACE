@@ -1,0 +1,4 @@
+import(stats, parallel, doParallel, ggplot2)
+export(cmmb, plot_cw_ide, plot_cmmb_sa)
+importFrom("graphics", "abline", "par", "segments", "text")
+importFrom("methods", "is")

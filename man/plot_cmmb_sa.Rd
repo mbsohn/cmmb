@@ -1,0 +1,34 @@
+\name{plot_cmmb_sa}
+\alias{plot_cmmb_sa}
+\title{
+Plot sensitivity of the estimated total indirect effect
+}
+\description{
+Plot sensitivity of the estimated total indirect effect between mediators and an outcome
+}
+\usage{
+plot_cmmb_sa(cmmb.output)
+}
+\arguments{
+  \item{cmmb.output}{an output of the \emph{cmmb} function}
+}
+\value{It plots estimated indirect effects given \emph{rho} with their pointwise 95\% confidence intervals}
+\references{
+Sohn, M.B., Lu, J. and Li, H. (2021). \emph{A Compositional Mediation Model for Binary Outcome: Application to Microbiome Studies} (Submitted)
+}
+\author{
+Michael B. Sohn
+
+Maintainer: Michael B. Sohn <michael_sohn@urmc.rochester.edu>
+}
+\examples{
+\dontrun{
+# Load a simulated dataset
+data(cmmb_deme_data)
+# Run CMM for binary outcomes
+rslt <- cmmb(Y=cmmb_deme_data$Y, M=cmmb_deme_data$M,
+             tr=cmmb_deme_data$tr, X=cmmb_deme_data$X, ForSA=TRUE)
+# Plot sensitivity of the estimated total indirect effect
+plot_cmmb_sa(rslt)
+}
+}
