@@ -24,10 +24,10 @@ Maintainer: Michael B. Sohn <michael_sohn@urmc.rochester.edu>
 \examples{
 \dontrun{
 # Load a simulated dataset
-data(cmmb_deme_data)
+data(cmmb_demo_data)
 # Run CMM for binary outcomes
-rslt <- cmmb(Y=cmmb_deme_data$Y, M=cmmb_deme_data$M,
-             tr=cmmb_deme_data$tr, X=cmmb_deme_data$X, ForSA=TRUE)
+rslt <- cmmb(Y=cmmb_demo_data$Y, M=cmmb_demo_data$M,
+             tr=cmmb_demo_data$tr, X=cmmb_demo_data$X, ForSA=TRUE)
 # Plot sensitivity of the estimated total indirect effect
 plot_cmmb_sa(rslt)
 }
