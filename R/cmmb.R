@@ -248,49 +248,41 @@ est_cmm_probit <- function(Y, M, t, X, w=rep(1,length(Y))){
 }
 
 cmmb <- function(Y, M, tr, X, n.cores=NULL, n.boot=2000, ci.method="empirical",
-                 p.value=FALSE, ForSA=FALSE, max.rho=0.5, sig.level=0.05, FWER=FALSE,
-                 w=rep(1,length(Y)), prec=1e-4, max.iter=1000){
-  cmmb_boot <- function(...){
-    cide <- cde <- comp_cide <- comparam <- lmparam <- X.sa <- Sig1 <- NULL
-    indx_1 <- which(Y>0); indx_0 <- which(Y==0)
-    n.1 <- length(indx_1); n.0 <- length(indx_0)
-    for(i in 1:n.boots){
-      indx <- sort(c(sample(indx_1, n.1, replace=TRUE), sample(indx_0, n.0, replace=TRUE)))
-      boot.Y <- Y[indx]; boot.M <- M[indx,]; boot.tr <- c(scale(tr[indx], scale=FALSE))
-      if(is.null(X)){
-        boot.X <- NULL
-      } else{
-        boot.X <- scale(X[indx,], scale=FALSE)
-        X.sa <- cbind(X.sa, boot.X)
-      }
-      rslt_cmmb <- est_cmm_probit(boot.Y,boot.M,boot.tr,boot.X)
-      cde <- c(cde, rslt_cmmb$total[1])
-      cide <- c(cide, rslt_cmmb$total[2])
-      comp_cide <- rbind(comp_cide, rslt_cmmb$cwprod)
-      comparam <- cbind(comparam, rslt_cmmb$comparam)
-      lmparam <- rbind(lmparam, rslt_cmmb$lmparam)
-      Sig1 <- cbind(Sig1, rslt_cmmb$Sig1)
-    }
-    return(list(cde=cde, cide=cide, cwprod=comp_cide, comparam=comparam,
-                lmparam=lmparam, Xs=X.sa, Sig1=Sig1))
-  }
+                  p.value=FALSE, ForSA=FALSE, max.rho=0.5, sig.level=0.05, FWER=FALSE,
+                  w=rep(1,length(Y)), prec=1e-4, max.iter=1000){
   cmmb_rslt <- est_cmm_probit(Y,M,tr,X)
   cmmb_cde <- cmmb_rslt$total["cde"]
   cmmb_cide <- cmmb_rslt$total["cide"]
   if(is.null(n.cores)){
-    n.cores <- round(detectCores(logical=TRUE)/1.5)
+    n.cores <- detectCores(logical=TRUE)
   }
-  n.boots <- ceiling(n.boot/n.cores)
-  cmm.nest <- do.call(list, mclapply(seq_len(n.cores), cmmb_boot, mc.cores=n.cores))
+  registerDoParallel(n.cores)
+  X.sa <- NULL
+  cmm.nest <- foreach(j=1:n.boot) %dopar% {
+    indx_1 <- which(Y>0); indx_0 <- which(Y==0)
+    n.1 <- length(indx_1); n.0 <- length(indx_0)
+    indx <- sort(c(sample(indx_1, n.1, replace=TRUE), sample(indx_0, n.0, replace=TRUE)))
+    boot.Y <- Y[indx]; boot.M <- M[indx,]; boot.tr <- c(scale(tr[indx], scale=FALSE))
+    if(is.null(X)){
+      boot.X <- NULL
+    } else{
+      boot.X <- scale(X[indx,], scale=FALSE)
+      X.sa <- cbind(X.sa, boot.X)
+    }
+    tmp_cmmb_est <- est_cmm_probit(boot.Y,boot.M,boot.tr,boot.X)
+    tmp_cmmb_est$X.sa <- X.sa
+    return(tmp_cmmb_est)
+  }
   if(FWER==TRUE){
     n.test <- 2
   } else{
     n.test <- 1
   }
-  boot_est_cde_cmm <- unlist(lapply(cmm.nest, "[[", 1))
-  boot_est_cide_cmm <- unlist(lapply(cmm.nest, "[[", 2))
+  boot_est_total_cmm <- unlist(lapply(cmm.nest, "[[", 1))
+  boot_est_cde_cmm <- boot_est_total_cmm[names(boot_est_total_cmm)=="cde"]
+  boot_est_cide_cmm <- boot_est_total_cmm[names(boot_est_total_cmm)=="cide"]
   cmmb_cwprod <- cmmb_rslt$cwprod
-  boot_est_cwprod_cmm <- do.call(rbind, lapply(cmm.nest, "[[", 3))
+  boot_est_cwprod_cmm <- do.call(rbind, lapply(cmm.nest, "[[", 2))
   if(ForSA==FALSE){
     if(ci.method=="empirical"){
       del_cde_quant <- quantile(boot_est_cde_cmm-mean(boot_est_cde_cmm),
@@ -307,14 +299,14 @@ cmmb <- function(Y, M, tr, X, n.cores=NULL, n.boot=2000, ci.method="empirical",
         cde.null.dist <- boot_est_cde_cmm-mean(boot_est_cde_cmm)
         cide.null.dist <- boot_est_cide_cmm-mean(boot_est_cide_cmm)
         if(cmmb_cde<0){
-          cde_pval <- min(1, mean(cde.null.dist<cmmb_cde)*2)
+          cde_pval <- min(1, mean(cde.null.dist<cmmb_cde)*2*n.test)
         } else{
-          cde_pval <- min(1, mean(cde.null.dist>cmmb_cde)*2)
+          cde_pval <- min(1, mean(cde.null.dist>cmmb_cde)*2*n.test)
         }
         if(cmmb_cide<0){
-          cide_pval <- min(1, mean(cide.null.dist<cmmb_cide)*2)
+          cide_pval <- min(1, mean(cide.null.dist<cmmb_cide)*2*n.test)
         } else{
-          cide_pval <- min(1, mean(cide.null.dist>cmmb_cide)*2)
+          cide_pval <- min(1, mean(cide.null.dist>cmmb_cide)*2*n.test)
         }
         frslt <- list(total=rbind(c(cmmb_cde, cde_lu, cde_pval), c(cmmb_cide, cide_lu, cide_pval)),
                       cwprod=cbind(cmmb_cwprod, cwprod_lu))
@@ -358,16 +350,16 @@ cmmb <- function(Y, M, tr, X, n.cores=NULL, n.boot=2000, ci.method="empirical",
     del_cwprod_quant <- apply(tmp_del_cwprod, 2,
                               function(x) quantile(x, c(sig.level/(2*n.test), 1-sig.level/(2*n.test))))
     cwprod_lu <- cmmb_cwprod - t(apply(del_cwprod_quant,2,rev))
-    boot_est_comparam_cmm <- do.call(cbind, lapply(cmm.nest, "[[", 4))
+    boot_est_comparam_cmm <- do.call(cbind, lapply(cmm.nest, "[[", 3))
     n.comparam <- length(unique(colnames(cmm.nest[[1]]$comparam)))
-    boot_est_lmparam_cmm <- do.call(rbind, lapply(cmm.nest, "[[", 5))
+    boot_est_lmparam_cmm <- do.call(rbind, lapply(cmm.nest, "[[", 4))
     if(!is.null(X)){
       boot_Xs_cmm <- do.call(cbind, lapply(cmm.nest, "[[", 6))
       n.X <- ncol(X)
     } else{
       boot_Xs_cmm <- NULL
     }
-    boot_est_altU1_cmm <- do.call(cbind, lapply(cmm.nest, "[[", 7))
+    boot_est_altU1_cmm <- do.call(cbind, lapply(cmm.nest, "[[", 5))
     k <- nrow(cmm.nest[[1]]$comparam)
 
     if(abs(max.rho)>0.99) max.rho <- 0.99
@@ -454,14 +446,14 @@ cmmb <- function(Y, M, tr, X, n.cores=NULL, n.boot=2000, ci.method="empirical",
       cde.null.dist <- boot_est_cde_cmm-mean(boot_est_cde_cmm)
       cide.null.dist <- boot_est_cide_cmm-mean(boot_est_cide_cmm)
       if(cmmb_cde<0){
-        cde_pval <- min(1, mean(cde.null.dist<cmmb_cde)*2)
+        cde_pval <- min(1, mean(cde.null.dist<cmmb_cde)*2*n.test)
       } else{
-        cde_pval <- min(1, mean(cde.null.dist>cmmb_cde)*2)
+        cde_pval <- min(1, mean(cde.null.dist>cmmb_cde)*2*n.test)
       }
       if(cmmb_cide<0){
-        cide_pval <- min(1, mean(cide.null.dist<cmmb_cide)*2)
+        cide_pval <- min(1, mean(cide.null.dist<cmmb_cide)*2*n.test)
       } else{
-        cide_pval <- min(1, mean(cide.null.dist>cmmb_cide)*2)
+        cide_pval <- min(1, mean(cide.null.dist>cmmb_cide)*2*n.test)
       }
       frslt <- list(total=rbind(c(cmmb_cde, cde_lu, cde_pval), c(cmmb_cide, cide_lu, cide_pval)),
                     cwprod=cbind(cmmb_cwprod, cwprod_lu),

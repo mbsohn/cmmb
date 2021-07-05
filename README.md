@@ -1,7 +1,7 @@
 README
 ================
 Michael B. Sohn
-7/01/2021
+7/05/2021
 
 ## CMMB: Compositional Mediation Model for Binary Outcomes
 
@@ -29,7 +29,9 @@ library(cmmb)
 source("comparators.R")
 ### Generate a simulated dataset of 50 samples and 5 taxa
 set.seed(2021)
-### The gen.cmm.sim.data function simulates data based on the logistic normal distribution. The first argument takes the number of samples and the second takes the number of components (taxa).
+### The gen.cmm.sim.data function simulates data based on the logistic normal distribution. The first argument 
+### takes the number of samples and the second takes the number of components (taxa). By default, both direct
+### and indirect effects are significantly different from zero.
 sim.dat <- gen.cmm.sim.data(50, 5)
 ### Run CMM for binary outcomes
 rslt <- cmmb(Y=sim.dat$Y, M=sim.dat$M, tr=sim.dat$tr, X=sim.dat$X)
@@ -38,16 +40,16 @@ rslt
 
     ## $total
     ##       Estimate Lower Limit Upper Limit
-    ## DE   0.1831665   0.1229387   0.2930580
-    ## TIDE 0.2585639   0.1391205   0.3345654
+    ## DE   0.1831665   0.1250823   0.2824590
+    ## TIDE 0.2585639   0.1589496   0.3277745
     ## 
     ## $cwprod
     ##           Estimate Lower Limit Upper Limit
-    ## taxon1  0.45250088  0.06145777   0.7646973
-    ## taxon2  0.00179244 -0.18731449   0.1584444
-    ## taxon3 -0.20841877 -0.53383632   0.1692616
-    ## taxon4  0.61865737 -0.14664985   1.1418571
-    ## taxon5  0.51405582 -0.45317917   1.1773031
+    ## taxon1  0.45250088  0.04660647   0.7459192
+    ## taxon2  0.00179244 -0.19522961   0.1598638
+    ## taxon3 -0.20841877 -0.51227069   0.1866653
+    ## taxon4  0.61865737 -0.09870767   1.1329467
+    ## taxon5  0.51405582 -0.48698579   1.1652202
     ## 
     ## attr(,"class")
     ## [1] "cmmb"
@@ -72,27 +74,26 @@ plot_cmmb_sa(rslt.sa)
 ### Performance comparison
 
 ``` r
-set.seed(2021)
 sim.dat <- gen.cmm.sim.data(50, 5)
 PCS(Y=sim.dat$Y, M=sim.dat$M, tr=sim.dat$tr, X=sim.dat$X)
 ```
 
-    ##           Estimate Lower Limit Upper Limit
-    ## DE   -0.0006223289   -0.573698   0.8385662
-    ## TIDE  0.1600846113   -2.155939   2.4267162
+    ##       Estimate Lower Limit Upper Limit
+    ## DE   0.8585578   -1.127475    1.802715
+    ## TIDE 0.5737664   -2.078500    2.364383
 
 ``` r
 PCP(Y=sim.dat$Y, M=sim.dat$M, tr=sim.dat$tr, X=sim.dat$X)
 ```
 
-    ##       Estimate Lower Limit Upper Limit
-    ## DE   0.4499679   0.2390003   0.7423284
-    ## TIDE 0.0217547  -0.2973603   0.1997812
+    ##        Estimate Lower Limit Upper Limit
+    ## DE   0.16603048  0.09920491  0.32829476
+    ## TIDE 0.01797279 -0.14491028  0.07923247
 
 ``` r
 cmmb(Y=sim.dat$Y, M=sim.dat$M, tr=sim.dat$tr, X=sim.dat$X)$total
 ```
 
     ##       Estimate Lower Limit Upper Limit
-    ## DE   0.1831665   0.1216986   0.2847858
-    ## TIDE 0.2585639   0.1530183   0.3294128
+    ## DE   0.1615200  0.11762662   0.2399494
+    ## TIDE 0.1003837  0.02545625   0.1414711
